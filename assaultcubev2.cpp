@@ -11,18 +11,18 @@ DWORD GetModuleBaseAddress(TCHAR* lpszModuleName, DWORD pID)
 	MODULEENTRY32 mEntry32 = { 0 }; // equals initialization?
 	mEntry32.dwSize = sizeof(MODULEENTRY32);
 
-		if (Module32First(hSnapshot, &mEntry32))//store first Module in ModuleEntry32
-		{
-			do {
-				if (_tcscmp(mEntry32.szModule, lpszModuleName) == 0) // if module we're looking for is found -> done
-				{
-					dwModuleBaseAddress = (DWORD)mEntry32.modBaseAddr;
-					break;
-				}
-			} while (Module32Next(hSnapshot, &mEntry32)); // goes through snapshot, stores them in moduleentry32
-		}
-		CloseHandle(hSnapshot);
-		return dwModuleBaseAddress;
+	if (Module32First(hSnapshot, &mEntry32))//store first Module in ModuleEntry32
+	{
+		do {
+			if (_tcscmp(mEntry32.szModule, lpszModuleName) == 0) // if module we're looking for is found -> done
+			{
+				dwModuleBaseAddress = (DWORD)mEntry32.modBaseAddr;
+				break;
+			}
+		} while (Module32Next(hSnapshot, &mEntry32)); // goes through snapshot, stores them in moduleentry32
+	}
+	CloseHandle(hSnapshot);
+	return dwModuleBaseAddress;
 }
 
 
@@ -32,7 +32,7 @@ int main()
 {
 
 	int loopcheat;
-	loopcheat:
+loopcheat:
 	HWND hGameWindow = FindWindow(NULL, "AssaultCube");
 	if (hGameWindow == NULL)
 	{
@@ -51,23 +51,21 @@ int main()
 	}
 
 	char gamename[] = "ac_client.exe";
-	DWORD gameBaseAddress = GetModuleBaseAddress(_T(gamename),pID); // gamename module base address, and appid
+	DWORD gameBaseAddress = GetModuleBaseAddress(_T(gamename), pID); // gamename module base address, and appid
 	DWORD BaseGAddress = 0x10F4F4; // Entity offset list
-	std::vector<DWORD> CWAOffset{ 0x374,0x14,0x0 }; 
+	std::vector<DWORD> CWAOffset{ 0x374,0x14,0x0 };
 	std::vector<DWORD> HPOffset{ 0xF8 };
 	std::vector<DWORD> KillsOffset{ 0x1FC };
 	std::vector<DWORD> DeathsOffset{ 0x204 };
 	std::vector<DWORD> GrenadeOffset{ 0x158 };
 	DWORD basead = NULL;
-	ReadProcessMemory(processHandle, (LPVOID)(gameBaseAddress+ BaseGAddress), &basead, sizeof(basead), NULL);
-	std::cout << "debugginfo: baseaddress = " << std::hex << basead << std::endl;
+	ReadProcessMemory(processHandle, (LPVOID)(gameBaseAddress + BaseGAddress), &basead, sizeof(basead), NULL);
 	DWORD CWAAddress = basead;
 	for (int loopi = 0; loopi < CWAOffset.size() - 1; loopi++) // loops through vector containing our offsets for current weapon (cwaoffset)
 	{
 		ReadProcessMemory(processHandle, (LPVOID)(CWAAddress + CWAOffset.at(loopi)), &CWAAddress, sizeof(CWAAddress), NULL);
-		std::cout << "debugging: value at offset = " << std::hex << CWAAddress << std::endl;
 	}
-	
+
 	DWORD HPAddress = basead;
 	for (int healthloop{ 0 }; healthloop < HPOffset.size() - 1; healthloop++)
 	{
@@ -82,7 +80,6 @@ int main()
 	for (int deathloop{ 0 }; deathloop < DeathsOffset.size() - 1; deathloop++)
 	{
 		ReadProcessMemory(processHandle, (LPVOID)(deathsaddress + DeathsOffset.at(deathloop)), &deathsaddress, sizeof(deathsaddress), NULL);
-		std::cout << "debugging: death value at offset = " << std::hex << deathsaddress << std::endl;
 	}
 	DWORD grenaded = basead; // grenade offset blah blah blah
 	for (int grenadeloop{ 0 }; grenadeloop < GrenadeOffset.size() - 1; grenadeloop++)
@@ -96,6 +93,11 @@ int main()
 	deathsaddress += DeathsOffset.at(DeathsOffset.size() - 1);
 	grenaded += GrenadeOffset.at(GrenadeOffset.size() - 1);
 
+	std::cout << "debugginfo: baseaddress = " << std::hex << basead << std::endl;
+	std::cout << "debugging: death value at offset = " << std::hex << deathsaddress << std::endl;
+	std::cout << "debugging: kills at offset = " << std::hex << Killsaddress << std::endl;
+	std::cout << "debugging: grenades at offset = " << std::hex << grenaded << std::endl;
+	std::cout << "debugging: current ammo at offset = " << std::hex << CWAAddress << std::endl;
 	int NAmmo = 9'999; // new ammo
 	int lotsofhealth = 999'999'999; // new health
 	int killingmachine = 999'999'999; // new kills on scoreboard
@@ -103,15 +105,15 @@ int main()
 	int grenades = 999'999'999; // grenade since player cant hold grenade until they grab one
 	WriteProcessMemory(processHandle, (LPVOID)(CWAAddress), &NAmmo, 4, 0); // writes new value to current value 
 	WriteProcessMemory(processHandle, (LPVOID)(HPAddress), &lotsofhealth, 4, 0); // writes to health
-	WriteProcessMemory(processHandle, (LPVOID)(Killsaddress), &killingmachine, 4, 0); // writes to kills on scoreboard
-	WriteProcessMemory(processHandle, (LPVOID)(deathsaddress), &NeverDied, 4, 0); // writes to deaths on scoreboard
-	WriteProcessMemory(processHandle, (LPVOID)(grenaded), &grenades, 4, 0); // writes to grenades
-	while (true) // every 100 miliseconds repeats the code - will spam console with debug info tho (sadly)
+	WriteProcessMemory(processHandle, (LPVOID)(Killsaddress), &killingmachine, 4, 0);
+	WriteProcessMemory(processHandle, (LPVOID)(deathsaddress), &NeverDied, 4, 0);
+	WriteProcessMemory(processHandle, (LPVOID)(grenaded), &grenades, 4, 0);
+	while (true) // every 100 miliseconds repeats the code - basically infinite health & ammo
 	{
-	Sleep(100);
-	goto loopcheat;
+		Sleep(100);
+		goto loopcheat;
 
-		
 
 	}
-}	
+
+}
